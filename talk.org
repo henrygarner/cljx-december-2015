@@ -412,6 +412,56 @@ NB: mean-step - will refer to later
 - Are we done? No - parallelism
 #+END_NOTES
 
+
+* Diagram
+
+We want to avoid making serial folds over the data.
+
+..Diagram..
+
+* Juxt
+
+(map (juxt mean-step sd-step))
+
+#+BEGIN_NOTES
+- This doesn't work because the same arguments are passed to each step function
+
+- Each step function maintains its own accumulator
+#+END_NOTES
+
+
+* Fuse steps
+#+BEGIN_SRC clojure
+(defn fuse [named-steps]
+  (fn
+    ([]
+     (reduce (fn [m [k v]]
+               (assoc m k (v))) {} named-steps))
+    ([accum x]
+     (reduce (fn [m [k v]]
+               (update-in m [k] v x)) accum named-steps))
+    ([accum]
+     (reduce (fn [m [k v]]
+               (update-in m [k] v)) accum named-steps))))
+#+END_SRC
+
+* Transducer composition
+
+We're used to transforming a sequence with a function.
+
+What about transforming a function with a sequence?
+
+#+BEGIN_SRC clojure
+(defn pipeline
+  "Uses xs to adjust xform by appending normalization step"
+  [xform xs]
+  (let [aggregates (transduce xform
+                              (fuse {:mean mean-step
+                                     :sd   sd-step})
+                              xs)]
+    (comp xform (map "normalize magic goes here"))))
+#+END_SRC
+
 * Enter Reducers
 
 - Pre-date transducers
@@ -508,6 +558,15 @@ solve(problem):
 - Getting a reducing function 'out of' a transducer
 #+END_NOTES
 
+* Get a reducing function back out
+
+#+BEGIN_SRC clojure
+(let [f (weighted-avg :a :b)]
+ (reduce f (f) [{:a 1 :b 2} {:a 4 :b 8}]))
+
+;; [[#object[example.core$wrapping$fn__80296 0x3f478522 "example.core$wrapping$fn__80296@3f478522"] #object[clojure.lang.Volatile 0x573499fb {:status :ready, :val {:sum 5, :count 2}}]] [#object[example.core$wrapping$fn__80296 0x414f525c "example.core$wrapping$fn__80296@414f525c"] #object[clojure.lang.Volatile 0x179ba0e5 {:status :ready, :val {:sum 10, :count 2}}]]]
+#+END_SRC
+
 * Anatomy of a transducer
 
 #+BEGIN_SRC clojure
@@ -535,100 +594,26 @@ solve(problem):
 - these ideas are general
 #+END_NOTES
 
-* Enter Tesser
+* Enter core.async
 
-https://github.com/aphyr/tesser
+Core async has a reduce, but no combine.
 
-#+BEGIN_SRC clojure
-(:require [tesser.core :as t]
-          [tesser.math :as m])
-
-(def mean-fold
-  (->> (t/filter relevant?)
-       (t/map convert-currency)
-       (t/map assign-score)
-       (t/map :score)
-       (m/mean)))
-
-(-> (t/chunk 1024 (load-data "data.edn"))
-    (t/tesser mean-fold))
-
-;; 405.0
-#+END_SRC
-
-#+BEGIN_NOTES
-- The mean fold is a composition of processing steps (no data)
-- Tesser requires us to explicitly chunk data (no fork/join)
-
-- How does Tesser represent folds...
-#+END_NOTES
-
-* Mean recipe
+Combine is just another reduce over the intermediate steps.
 
 #+BEGIN_SRC clojure
-{:reducer-identity  (constantly [0 0])
- :reducer           (fn reducer [[s c] x]
-                      [(+ s x) (inc c)])
- :post-reducer      identity
- :combiner-identity (constantly [0 0])
- :combiner          (fn combiner [x y] (core/map + x y))
- :post-combiner     (fn post-combiner [x]
-                      (double (/ (first x) (core/max 1 (last x)))
+(defn pipeline-r [n f g xs]
+  (let [in (async/chan n)]
+    (async/onto-chan in xs)
+    (->> (for [_ (range n)]
+           (async/reduce f (f) in))
+         (async/merge)
+         (async/reduce g (g))
+         (async/<!!)
+         (f))))
 #+END_SRC
-
-#+BEGIN_NOTES
-- Actually Tesser's internal representation
-
-- Can we define our own? Sure!
-#+END_NOTES
-
-* Defining our own fold
-
-#+BEGIN_SRC clojure
-(def iqr-transform
-  {:reducer-identity (fn [] (DoubleHistogram. 1e8 3))
-   :reducer (fn [hist x]
-              (doto hist
-                (.recordValue x)))
-   :post-reducer identity
-   :combiner-identity (fn [] (DoubleHistogram. 1e8 3))
-   :combiner (fn [a b]
-               (doto a (.add b)))
-   :post-combiner (fn [hist]
-                    (vector (.getValueAtPercentile hist 25)
-                            (.getValueAtPercentile hist 75)))})
-
-(def iqr-fold
-  (->> (t/filter relevant?)
-       (t/map convert-currency)
-       (t/map assign-score)
-       (t/map :score)
-       (t/fold iqr-transform)))
-
-(-> (t/chunk 1024 (load-data "data.edn"))
-    (t/tesser iqr-fold))
-
-;; [175.0 240.0]
-#+END_SRC
-
-#+BEGIN_NOTES
-- Note combiner function. Adds histograms calculated independently.
-- Tesser provides tesser.math namespace providing a variety of useful functions.
-#+END_NOTES
-
-* Mathematical helpers
-
-- mean
-- variance
-- standard-deviation
-- covariance
-- correlation
-- covariance-matrix
-- correlation-matrix
-- digest (histogram, cardinality estimation)
 
 * Calculating variance
-
+ 
 #+BEGIN_SRC clojure
 {:reducer-identity (constantly [0 0 0])
  :reducer (fn count-mean-sq [[count mean sum-of-squares] x]
@@ -649,51 +634,6 @@ https://github.com/aphyr/tesser
  :post-combiner (fn vardiv [x]
                   (double (/ (last x) (core/max 1 (dec (first x))))))}
 #+END_SRC
-
-
-* Other combinators
-
-#+BEGIN_SRC clojure
-(def multi-iqr-fold
-  (->> (t/filter relevant?)
-       (t/map convert-currency)
-       ;; Facet runs fold on all keys in a map
-       (t/map #(select-keys % [:a :b]))
-       (t/facet)
-       (t/fold iqr-transform)))
-
-(-> (t/chunk 1024 (load-data "data.edn"))
-    (t/tesser multi-iqr-fold))
-
-;; {:a [100.0 112.5] :b [62.5 140.09375]}
-#+END_SRC
-
-#+BEGIN_NOTES
-- Facet when your input is a map
-- You'd like to run the same fold on all values
-#+END_NOTES
-
-* Other combinators
-
-#+BEGIN_SRC clojure
-(def fused-fold
-  (->> (t/filter relevant?)
-       (t/map convert-currency)
-       (t/map assign-score)
-       ;; Fuse runs different named folds
-       (t/fuse {:count (t/count)
-                :iqr   (->> (t/map :score)
-                            (t/fold iqr-transform))})))
-
-(-> (t/chunk 1024 (load-data "data.edn"))
-    (t/tesser fused-fold))
-
-;; {:count 3, :iqr [175.0 240.0]}
-#+END_SRC
-
-#+BEGIN_NOTES
-- You'd to calculate several folds in parallel
-#+END_NOTES
 
 * Simple Regression
 
@@ -731,35 +671,10 @@ https://github.com/aphyr/tesser
 - Where's my cake?
 #+END_NOTES
 
-* Yes, it is web scale
 
-#+BEGIN_SRC clojure
-(:require [tesser.hadoop :as h]
-          [parkour.io.text :as text]
-          [parkour.tool :as tool])
-(:gen-class)
-
-(defn linear-regression-dfold [fx fy]
-  (->> (t/map read-string)
-       (t/filter relevant?)
-       (t/map convert-currency)
-       (linear-regression fx fy)))
-
-(defn tool [conf input-file work-dir]
-  (let [dseq (text/dseq input-file)]
-    (h/fold conf dseq work-dir
-            #'linear-regression-dfold
-            :a :b)))
-
-(defn -main [& args]
-  (System/exit (tool/run tool args)))
-#+END_SRC
-
-#+BEGIN_NOTES
-- We can take the same fold apply it in a very different environment
-- Develop locally, run remotely
-#+END_NOTES
-
+* Reducing function Rules
+- Always call completion
+- Respect reduced
 * Summary
 
 - Separate process from substrate
@@ -792,3 +707,7 @@ http://cljds.com/cljds-amzn
 - Ideally you know a little Clojure already
 - Learn statistics and machine learning with Clojure
 #+END_NOTES
+* References
+
+https://github.com/cgrand/xforms
+https://github.com/aphyr/tesser

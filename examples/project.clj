@@ -4,14 +4,16 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/core.async "0.2.374"]
+                 [compojure "1.4.0"]
+                 [ring/ring-defaults "0.1.5"]
+                 [ring/ring-json "0.4.0"]
+                 [http-kit "2.1.18"]
                  [tesser.core "1.0.1"]
                  [tesser.math "1.0.1"]
-                 [tesser.hadoop "1.0.2"]
+                 [criterium "0.4.3"]
+                 [incanter "1.5.6"]
                  [org.hdrhistogram/HdrHistogram "2.1.2"]]
-  :profiles {:provided
-             {:dependencies
-              [[org.apache.hadoop/hadoop-client "2.4.1"]
-               [org.apache.hadoop/hadoop-common "2.4.1"]
-               [org.slf4j/slf4j-api "1.6.1"]
-               [org.slf4j/slf4j-log4j12 "1.6.1"]
-               [log4j "1.2.17"]]}})
+  :plugins [[lein-ring "0.9.7"]]
+  :ring {:handler example.handler/app
+         :nrepl {:start? true}})

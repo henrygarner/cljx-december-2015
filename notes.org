@@ -1,0 +1,5 @@
+Any process that can be modeled as a sequence of steps
+Building up a list is one of example of this process
+But it's not the only one.
+
+*Maybe* reduce.

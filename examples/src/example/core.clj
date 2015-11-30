@@ -577,20 +577,18 @@
     ([]    (mapv (fn [f] (f)) rfns))
     ([acc] (mapv (fn [f a] (f (unreduced a))) rfns acc))
     ([acc x]
-     (let [all-reduced? (volatile! true)
-           results (mapv (fn [f a]
-                           (if (reduced? a) a
-                               (do (vreset! all-reduced? false)
-                                   (f a x))))
-                         rfns acc)]
+     (let all-reduced? (volatile! true)
+          results (mapv (fn [f a]
+                          (if (reduced? a) a
+                              (do (vreset! all-reduced? false)
+                                  (f a x))))
+                        rfns acc)
        (if @all-reduced? (reduced results) results)))))
 
 (defn fuse [kvs]
   (let [rfns (vals kvs)
         rf   (apply juxt rfns)]
     (completing rf #(zipmap (keys kvs) (rf %)))))
-
-
 
 (def normal-step
   (juxt mean-step sd-step))
@@ -619,11 +617,8 @@ completing
      [count' mean'
       (+ sum-of-squares (* (- x mean') (- x mean)))])))
 
-(defn sqrt [x]
-  (Math/sqrt x))
-
 (def standard-deviation
-  (completing variance #(sqrt (variance %))))
+  (completing variance #(Math/sqrt (variance %))))
 
 (defn facet [rf fns]
   (->> (map (fn [f] ((map f) rf)) fns)
@@ -642,6 +637,9 @@ completing
 
 ;; Can calculate on summary of data on sample of data
 
+
+(def weighted-mean-seq
+  (transduce (map identity) (weighted-mean :a :b) (load-data "data.edn")))
 
 (def  ks [:a :b])
 (def  f  (facet normal-step ks))
@@ -665,6 +663,9 @@ completing
 
 #_(defn normalize [[mean sd] x]
     (cdf-normal x :mean mean :sd sd))
+
+
+
 
 (def normalize
   (pipeline [:a :b]))
@@ -702,6 +703,14 @@ completing
 
 ;; Step function must honour reduced.
 ;; Naive implementation of juxt wont.
+
+(def summary-stats
+  (fuse {:mean mean-step
+         :sd   standard-deviation}))
+
+(transduce (map identity) summary-stats (range 100))
+
+
 
 (def fields [:a :b])
 

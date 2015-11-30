@@ -1,0 +1,123 @@
+/**
+ * Zenburn theme for reveal.js.
+ * Author: Henry Garner
+ */
+
+
+// Default mixins and settings -----------------
+@import "../template/mixins";
+@import "../template/settings";
+// ---------------------------------------------
+
+
+/**
+ * Solarized colors by Ethan Schoonover
+ */
+html * {
+	color-profile: sRGB;
+	rendering-intent: auto;
+}
+
+$heading1Size: 2.5em;
+$heading2Size: 2.11em;
+$heading3Size: 1.55em;
+$heading4Size: 1.00em;
+
+$base00:     #3F3F3F;
+$base00:     #92a4a7;
+$base00: #DCDCDC;
+$backgroundColor: #EAEAEA;
+$backgroundColor: #102c5b;
+$backgroundColor: #002b36;
+$backgroundColor: #262626;
+
+// Override theme settings (see ../template/settings.scss)
+$mainColor: $base00;
+
+$headingColor: $base00;
+$headingTextShadow: none;
+$headingFont: 'Ubuntu', serif;
+$headingTextTransform: none;
+// $headingFont: 'MerriweatherSans-Regular', serif;
+
+// $mainFont: 'SourceSansPro-Regular', serif;
+$mainFont: 'Noto Sans', serif;
+$mainFontSize: 30px;
+// $mainFont: 'Oxygen-Regular', serif;
+
+$linkColor: #0433ff;
+
+// Background generator
+// @mixin bodyBackground() {
+// 	@include radial-gradient( rgba($base3,1), rgba(lighten($base3, 20%),1) );
+// }
+
+
+
+// Theme template ------------------------------
+@import "../template/theme";
+// ---------------------------------------------
+
+
+pre.src {
+    display: block;
+    padding: 1em;
+//    background: #3F3F3F;
+    color: #DCDCDC;
+    line-height: 1.2em;
+    box-shadow: none;
+    font-size: 0.67em;
+}
+
+ul > li {
+  line-height: 1.6em !important;
+}
+
+a {
+  // font-family: monospace !important;
+  color: #4dafff !important;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+    margin-bottom: 0.6em;
+}
+
+
+// Zenburn Highlightjs
+
+// defn F0DFAF
+// sym 93E0E3
+// keyword BFEBBF
+// str CC9393
+// comment 7F9F7F
+
+// 
+// .hljs {
+//   display: block;
+//   overflow-x: auto;
+//   padding: 0.5em;
+//   background: #3f3f3f;
+//   color: #dcdcdc;
+//   -webkit-text-size-adjust: none;
+// }
+// 
+// .clojure .hljs-attribute {
+// color: #BFEBBF;
+// }
+// 
+// .clojure .hljs-keyword .hljs-built_in {
+// color: #F0DFAF;
+// font-weight: bold;
+// }
+// 
+// 
+// .hljs-built_in {
+//  color: #93E0E3;
+// }
+// 
+// /div/pre/code/span[2]/text()[2]

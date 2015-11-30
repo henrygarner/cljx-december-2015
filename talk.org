@@ -1,12 +1,12 @@
-#+Title: Expressive Parallel Analytics in Clojure
+#+Title: Expressive Parallel Analytics with Transducers
 #+Author:
 #+Email:
 
-#+REVEAL_EXTRA_CSS: ./reveal.js/lib/css/zenburn.css
-#+REVEAL_MATHJAX_URL: MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML
-#+REVEAL_THEME: solarized
-#+OPTIONS: num:nil toc:nil reveal_mathjax:t reveal_history:t reveal_control:nil reveal_progress:nil
-#+REVEAL_TRANS: fade
+#+REVEAL_THEME: zenburn
+#+REVEAL_EXTRA_CSS: ./extra.css
+#+OPTIONS: num:nil toc:nil reveal_mathjax:t reveal_history:t reveal_control:nil reveal_progress:nil reveal_center:nil
+#+REVEAL_TRANS: none
+# #+REVEAL_PLUGINS: (highlight)
 
 * Who am I?
 
@@ -17,42 +17,62 @@
 - Now a freelance data scientist and data engineer
 #+END_NOTES
 
-* Mission-critical data
+* Mission-critical analysis
 
 [[./images/mastodon.png]]
 
 [[./images/the-wur.png]]
 
 #+BEGIN_NOTES
-- Released a few weeks ago
+- Not going to cover anything especially new
+- Encourage you to look closer at some of what Clojure already provides
+- Give you some new ways to solve existing problems
+
+- Released a couple of months ago
 - New methodology
 - New implementation
 - Clojure!
 #+END_NOTES
 
-* Stats
+* Metastatistics
 
 https://www.timeshighereducation.com/news/ranking-methodology-2016
 
 - 13 performance indicators
 - 10 quotient indicators
 - 4  weighted quotients across 6 subjects
-- 800+ institutions
-- 7  ranking tables
+- 1,000+ institutions
+- 7 ranking tables
 
 #+BEGIN_NOTES
 - Won't speak in detail about methodology
 - Gives a flavour for the kinds of problems I'm addressing.
 #+END_NOTES
 
-* Analytic pipeline
+* Annoying-sized data
 
-- load rows
-- calculate summary statistics
-- process rows w.r.t. summary statistics
-- [further processing]
-- output
-- x 13 x 7
+#+BEGIN_NOTES
+- Not large enough for Hadoop
+- Large enough to be worth optimizing
+
+
+#+END_NOTES
+
+* Analytic sequence
+
+#+ATTR_REVEAL: :frag (appear appear appear appear appear) :frag_idx (1 1 1 4)
+1. Load & join
+2. Apply rules
+   #+ATTR_REVEAL: :frag (appear appear appear) :frag_idx (2 2 2)
+   1. Apply filters
+   2. Normalise data
+      #+ATTR_REVEAL: :frag (appear appear appear) :frag_idx (3 3 3)
+      1. Harmonise units
+      2. Summary statistics
+      3. Harmonise ranges
+   3. Calculate score
+3. Output
+4. x 13 x 7
 
 #+BEGIN_NOTES
 - Normalise, calculate CDFs
@@ -60,52 +80,14 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 - This is data engineering
 - Want to productionise sexy algorithm
 - Maybe you're building an intricate data processing system
-
-- Set context...
 #+END_NOTES
 
-* Nope
-
-#+BEGIN_SRC javascript
-do_something()
-do_something_else()
-then_do_this()
-#+END_SRC
-
-#+BEGIN_NOTES
-- Not talking about global state
-- What languages are people using? (Python, R, SAS, Scala, Clojure?)
-#+END_NOTES
-
-* Pipe.line()
-
-#+BEGIN_SRC javascript
-PipeLine.doSomething().doSomethingElse().thenDoThis()
-#+END_SRC
-
-#+BEGIN_NOTES
-- Familiar if you've used Spark (RDDs)
-#+END_NOTES
-
-* (Pipeline :-)
-
-#+BEGIN_SRC clojure
-(then-do-this (do-something-else (do-something)))
-#+END_SRC
-
-#+BEGIN_NOTES
-- We're in Clojure-land
-- Parens in a different place
-
-- Let's use a concrete example...
-#+END_NOTES
-
-* Threading
+* Thread-last
 
 #+BEGIN_SRC clojure
 (->> (load-data "data.edn")
-     (select-relevant)
-     (convert-currency)
+     (select-relevant)  ;; Apply filters
+     (convert-currency) ;; Normalize 
      (assign-score))
 #+END_SRC
 
@@ -117,7 +99,7 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 - What are those functions doing?
 #+END_NOTES
 
-* Enter Sequence-processing functions
+* Sequence functions
 
 - map
 - filter
@@ -150,6 +132,16 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 
 - Problem 1:
 - Processing is bound to data
+#+END_NOTES
+
+* Mapping
+
+(Image of guitar and amp)
+
+#+BEGIN_NOTES
+- We have a sequence being transformed
+
+- Sound waves being amplified
 #+END_NOTES
 
 * Solved?
@@ -204,6 +196,16 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 - Separate the transformation from the source AND sink
 #+END_NOTES
 
+* Effects pedals and speaker
+
+(Image of effects pedals board)
+
+#+BEGIN_NOTES
+- The effects pedals (the transform)
+
+- Separate from the sink
+#+END_NOTES
+
 * No Seq in Sight
 
 #+BEGIN_SRC clojure
@@ -214,6 +216,7 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 #+END_SRC
 
 #+BEGIN_NOTES
+- This is our effects board
 - This is Clojure 1.7 map and filter
 - They have become transducers
 - Their composition is also a transducer
@@ -236,7 +239,7 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 - Produces lazy sequence
 #+END_NOTES
 
-* It is an open system
+* It's an open system
 
 #+BEGIN_SRC clojure
 (->> (load-data "data.edn")
@@ -271,6 +274,14 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 - Added intermediate collection back
 #+END_NOTES
 
+* Image of mic'd amp
+
+#+BEGIN_NOTES
+- Why the intermediate step?
+
+- We can process directly into sink
+#+END_NOTES
+
 * Transduce
 
 #+BEGIN_SRC clojure
@@ -287,7 +298,7 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 - What does a step function look like?
 #+END_NOTES
 
-* Reducing step function
+* Reducing functions
 
 #+BEGIN_SRC clojure
 (+)
@@ -311,7 +322,11 @@ PipeLine.doSomething().doSomethingElse().thenDoThis()
 ;; [21 21]
 #+END_SRC
 
-* An IQR step function
+#+BEGIN_NOTES
+- Init it optional
+#+END_NOTES
+
+* Interquartile range
 
 https://github.com/HdrHistogram/HdrHistogram
 
@@ -348,14 +363,17 @@ https://github.com/HdrHistogram/HdrHistogram
 - Identical transformer, very different output
 #+END_NOTES
 
-* Sequential processing
+* Steps
 
 #+BEGIN_SRC clojure
+(defn in-range [f from to]
+  (filter #(<= from (f %) to))
+
 (defn iqr-sequence [xform data]
   (let [[from to] (->> data
                        (transduce (comp xform (map :score)) hist-iqr))]
     (->> data
-         (sequence (comp xform (filter #(<= from (:score %) to)))))))
+         (sequence (comp xform (in-range :score from to)))))
 #+END_SRC
 
 #+BEGIN_NOTES
@@ -365,7 +383,9 @@ https://github.com/HdrHistogram/HdrHistogram
 - Let's assume we want to calculate mean...
 #+END_NOTES
 
-* Mean step function
+* Mean reducing function
+
+TODO: better name (maybe just mean?)
 
 #+BEGIN_SRC clojure
 (defn mean-step
@@ -399,7 +419,7 @@ NB: mean-step - will refer to later
                        (transduce (comp xform (map :score)) hist-iqr))]
     (->> data
          (transduce (comp xform
-                     (filter #(<= from (:score %) to))
+                     (in-range :score from to)
                      (map :score))
                     mean-step))))
 
@@ -412,16 +432,21 @@ NB: mean-step - will refer to later
 - Are we done? No - parallelism
 #+END_NOTES
 
+* Concurrent calculation
 
-* Diagram
-
-We want to avoid making serial folds over the data.
-
-..Diagram..
+What if we want to calculate the mean and the standard deviation?
 
 * Juxt
 
-(map (juxt mean-step sd-step))
+#+BEGIN_SRC clojure
+  (juxt :a :b)
+#+END_SRC
+
+* Juxt
+
+#+BEGIN_SRC clojure
+(juxt mean-step sd-step)
+#+END_SRC
 
 #+BEGIN_NOTES
 - This doesn't work because the same arguments are passed to each step function
@@ -429,43 +454,225 @@ We want to avoid making serial folds over the data.
 - Each step function maintains its own accumulator
 #+END_NOTES
 
+* Juxt
 
-* Fuse steps
 #+BEGIN_SRC clojure
-(defn fuse [named-steps]
+(defn simple-juxt [& rfns]
   (fn
-    ([]
-     (reduce (fn [m [k v]]
-               (assoc m k (v))) {} named-steps))
-    ([accum x]
-     (reduce (fn [m [k v]]
-               (update-in m [k] v x)) accum named-steps))
-    ([accum]
-     (reduce (fn [m [k v]]
-               (update-in m [k] v)) accum named-steps))))
+    ([]      (mapv (fn [f]   (f))     rfns))
+    ([acc]   (mapv (fn [f a] (f a))   rfns acc))
+    ([acc x] (mapv (fn [f a] (f a x)) rfns acc))))
+
+(def rf
+  (simple-juxt + conj))
+
+(transduce (map identity) rf (range 10))
+
+;; => [45 [0 1 2 3 4 5 6 7 8 9]]
 #+END_SRC
 
-* Transducer composition
+#+BEGIN_NOTES
+Simple juxt acts as a proxy for each reducing function
+#+END_NOTES
+
+* Early termination
+
+#+BEGIN_SRC clojure
+(def rf
+  (simple-juxt + ((take 3) conj)))
+
+(transduce (map identity) rf (range 10))
+
+;; => [45 #object[clojure.lang.Reduced 0x643ea00c {:status :ready, :val [0 1 2]}]]
+#+END_SRC
+
+#+BEGIN_NOTES
+Reducing functions must honour "reduced?"
+#+END_NOTES
+
+* Juxt
+
+#+BEGIN_SRC clojure
+(defn juxt [& rfns]
+  (fn
+    ([]    (mapv (fn [f] (f)) rfns))
+    ([acc] (mapv (fn [f a] (f (unreduced a))) rfns acc))
+    ([acc x]
+     (let [all-reduced? (volatile! true)
+           results (mapv (fn [f a]
+                           (if (reduced? a) a
+                               (do (vreset! all-reduced? false)
+                                   (f a x))))
+                         rfns acc)]
+       (if @all-reduced? (reduced results) results)))))
+
+(def rf
+  (juxt + ((take 3) conj)))
+
+(transduce (map identity) rf (range 10))
+
+;; => [45 [0 1 2]]
+#+END_SRC
+
+* Facet
+
+#+BEGIN_SRC clojure
+(defn facet [rf fns]
+  (->> (map (fn [f] ((map f) rf)) fns)
+       (apply juxt)))
+
+(def rf
+  (facet conj [inc dec]))
+
+(transduce (map identity) rf (range 10))
+
+;; => [[1 2 3 4 5 6 7 8 9 10] [-1 0 1 2 3 4 5 6 7 8]]
+#+END_SRC
+
+#+BEGIN_NOTES
+Takes one step function
+Runs it after each of the provided functions
+#+END_NOTES
+
+* Weighted average
+
+#+BEGIN_SRC clojure
+(defn weighted-mean [nf df]
+  (let [rf (facet mean-step [nf df])]
+    (completing rf (fn [x]
+                     (let [[n d] (rf x)]
+                       (if (zero? d) 0
+                           (/ n d)))))))
+
+(def rf
+  (weighted-mean :a :b))
+
+(transduce (map identity) rf (load-data "data.edn"))
+
+;; => 7/6
+#+END_SRC
+
+#+BEGIN_NOTES
+Using facet to calculate two means at once
+#+END_NOTES
+
+* Fuse
+
+#+BEGIN_SRC clojure
+(defn fuse [kvs]
+  (let [rfns (vals kvs)
+        rf   (apply juxt rfns)]
+    (completing rf #(zipmap (keys kvs) (rf %)))))
+
+(def rf
+  (fuse {:one + :two conj}))
+
+(transduce (map identity) rf (range 10))
+
+;; => {:one 45, :two [0 1 2 3 4 5 6 7 8 9]}
+#+END_SRC
+
+#+BEGIN_NOTES
+Takes heterogeneous step functions
+Runs them in parallel
+#+END_NOTES
+
+* Standard deviation
+
+#+BEGIN_SRC clojure
+(defn variance
+  ([] [0 0 0])
+  ([[count mean sum-of-squares]]
+   (/ sum-of-squares (max 1 (dec count))))
+  ([[count mean sum-of-squares] x]
+   (let [count' (inc count)
+         mean'  (+ mean (/ (- x mean) count'))]
+     [count' mean'
+      (+ sum-of-squares (* (- x mean') (- x mean)))])))
+
+(def standard-deviation
+  (completing variance #(Math/sqrt (variance %))))
+#+END_SRC
+
+#+BEGIN_NOTES
+- Completing added 1.7
+- Adds identity completion arity
+- Allows custom functions
+#+END_NOTES
+
+* Harmonise ranges
+
+#+BEGIN_SRC clojure
+(def rf
+  (facet (fuse {:mean mean-step
+                :sd   standard-deviation})
+         [:a :b]))
+
+(transduce (map identity) rf (load-data "data.edn"))
+
+;; => [{:mean 70, :sd 18.257418583505537} {:mean 60, :sd 18.257418583505537}]
+#+END_SRC
+
+* Just use reduce?
+
+#+BEGIN_SRC clojure
+(def rf
+  (facet (fuse {:mean mean
+                :sd   standard-deviation
+                :iqr  interquartile-range})
+         [:a :b]))
+
+(rf (reduce rf (rf) (load-data "data.edn")))
+
+;; => [{:mean 70, :sd 18.257418583505537} {:mean 60, :sd 18.257418583505537}]
+#+END_SRC
+
+#+BEGIN_NOTES
+No need for (map identity)
+
+We call each of the three function arities
+#+END_NOTES
+
+* xform composition
 
 We're used to transforming a sequence with a function.
 
-What about transforming a function with a sequence?
+Why not adjust a transform function with a sequence?
+
+#+BEGIN_NOTES
+- Transmap takes a transform
+- a reducing function
+- and a function to pass to map
+#+END_NOTES
+
+* xform composition
 
 #+BEGIN_SRC clojure
-(defn pipeline
-  "Uses xs to adjust xform by appending normalization step"
-  [xform xs]
-  (let [aggregates (transduce xform
-                              (fuse {:mean mean-step
-                                     :sd   sd-step})
-                              xs)]
-    (comp xform (map "normalize magic goes here"))))
+(defn transform [xform f g xs]
+  (comp xform (g (transduce xform f xs))))
+
+(def fields [:a :b])
+
+(def summary-stats
+  (-> (fuse {:mean mean-step
+             :sd   standard-deviation})
+      (facet fields)))
+
+(defn normalise [stats]
+  (let [stats (zipmap fields stats)
+        f (fn [x [field {:keys [mean sd]}]]
+            (update-in x [field] cdf-normal :mean mean :sd sd))]
+    (map #(reduce f % stats))))
+
+(let [data (load-data "data.edn")]
+  (-> (filter relevant?)
+      (transform summary-stats normalise data)))
 #+END_SRC
 
 * Enter Reducers
 
-- Pre-date transducers
-- Also aim to reduce number of intermediate collections
+- Prior to transducers
+- Avoid intermediate collections
 - Bring parallelism through Java's fork/join
 
 #+BEGIN_NOTES
@@ -475,7 +682,7 @@ What about transforming a function with a sequence?
 
 * Fork / Join
 
-#+BEGIN_SRC txt
+#+BEGIN_SRC clojure
 solve(problem):
     if problem is small enough:
         solve problem directly (sequential algorithm)
@@ -567,6 +774,12 @@ solve(problem):
 ;; [[#object[example.core$wrapping$fn__80296 0x3f478522 "example.core$wrapping$fn__80296@3f478522"] #object[clojure.lang.Volatile 0x573499fb {:status :ready, :val {:sum 5, :count 2}}]] [#object[example.core$wrapping$fn__80296 0x414f525c "example.core$wrapping$fn__80296@414f525c"] #object[clojure.lang.Volatile 0x179ba0e5 {:status :ready, :val {:sum 10, :count 2}}]]]
 #+END_SRC
 
+* 
+:PROPERTIES:
+:reveal_background: ./images/synth/SynthMIT-M-1.jpg
+:CUSTOM_ID: paradiso
+:END:
+
 * Anatomy of a transducer
 
 #+BEGIN_SRC clojure
@@ -608,31 +821,8 @@ Combine is just another reduce over the intermediate steps.
            (async/reduce f (f) in))
          (async/merge)
          (async/reduce g (g))
-         (async/<!!)
+         (async/< !!)
          (f))))
-#+END_SRC
-
-* Calculating variance
- 
-#+BEGIN_SRC clojure
-{:reducer-identity (constantly [0 0 0])
- :reducer (fn count-mean-sq [[count mean sum-of-squares] x]
-            (let [count' (inc count)
-                  mean'  (+ mean (/ (- x mean) count'))]
-              [count'
-               mean'
-               (+ sum-of-squares (* (- x mean') (- x mean)))]))
- :post-reducer identity
- :combiner-identity (constantly [0 0 0])
- :combiner (fn partcmsq [[c m sq] [c2 m2 sq2]]
-             (let [count (+ c c2)]
-               (if (zero? count)
-                 [c m sq]
-                 [count
-                  (/ (+ (* c m) (* c2 m2)) count)
-                  (+ sq sq2 (/ (* (- m2 m) (- m2 m) c c2) count))])))
- :post-combiner (fn vardiv [x]
-                  (double (/ (last x) (core/max 1 (dec (first x))))))}
 #+END_SRC
 
 * Simple Regression
@@ -671,7 +861,6 @@ Combine is just another reduce over the intermediate steps.
 - Where's my cake?
 #+END_NOTES
 
-
 * Reducing function Rules
 - Always call completion
 - Respect reduced
@@ -707,6 +896,7 @@ http://cljds.com/cljds-amzn
 - Ideally you know a little Clojure already
 - Learn statistics and machine learning with Clojure
 #+END_NOTES
+
 * References
 
 https://github.com/cgrand/xforms

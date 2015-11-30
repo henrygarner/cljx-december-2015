@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Expressive Parallel Analytics in Clojure</title>
+<link rel="stylesheet" href="./reveal.js/css/reveal.css"/>
+<link rel="stylesheet" href="./reveal.js/css/theme/zenburn.css" id="theme"/>
+<link rel="stylesheet" href=""/>
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = './reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide">
+<h1>Expressive Parallel Analytics in Clojure</h1>
+<h2></h2>
+<h2><a href="mailto:"></a></h2>
+<h2></h2>
+</section>
+
+<section>
+<section id="slide-orgheadline1">
+<h2 id="orgheadline1">Who am I?</h2>
+<aside class="notes">
+<ul class="org-ul">
+<li>Was CTO of medium-sized data analytics company</li>
+<li>Switched to Clojure 4 years ago</li>
+<li>Left to write a book 1 year ago</li>
+<li>Now a freelance data scientist and data engineer</li>
+</ul>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline2">
+<h2 id="orgheadline2">Mission-critical data</h2>
+
+<div class="figure">
+<p><img src="./images/mastodon.png" alt="mastodon.png" />
+</p>
+</div>
+
+
+<div class="figure">
+<p><img src="./images/the-wur.png" alt="the-wur.png" />
+</p>
+</div>
+
+<aside class="notes">
+<ul class="org-ul">
+<li>Released a few weeks ago</li>
+<li>New methodology</li>
+<li>New implementation</li>
+<li>Clojure!</li>
+</ul>
+
+</aside>
+
+</section>
+</section>
+<section>
+<section id="slide-orgheadline3">
+<h2 id="orgheadline3">Stats</h2>
+<p>
+<a href="https://www.timeshighereducation.com/news/ranking-methodology-2016">https://www.timeshighereducation.com/news/ranking-methodology-2016</a>
+</p>
+
+<ul>
+<li>13 performance indicators</li>
+<li>10 quotient indicators</li>
+<li>4  weighted quotients across 6 subjects</li>
+<li>800+ institutions</li>
+<li>7  ranking tables</li>
+
+</ul>
+
+<aside class="notes">
+<ul class="org-ul">
+<li>Won't speak in detail about methodology</li>
+<li>Gives a flavour for the kinds of problems I'm addressing.</li>
+</ul>
+
+</aside>
+</section>
+</section>
+<section>
+<section id="slide-orgheadline4">
+<h2 id="orgheadline4">Clojure</h2>
+<div class="org-src-container">
+
+<pre><code class="clojure">(->> (load-data "data.edn")
+     (transduce (comp xform (map :score)) +))
+
+;; 1215.0
+</code></pre>
+</div>
+
+<aside class="notes">
+<p>
+Hello
+</p>
+
+</aside>
+</section>
+</section>
+<section>
+<section id="slide-orgheadline5">
+<h2 id="orgheadline5">Clojure II</h2>
+</section>
+</section>
+</div>
+</div>
+<script src="./reveal.js/lib/js/head.min.js"></script>
+<script src="./reveal.js/js/reveal.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: false,
+progress: false,
+history: true,
+center: false,
+slideNumber: true,
+rollingLinks: false,
+keyboard: true,
+overview: true,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'none', // default/cube/page/concave/zoom/linear/fade/none
+transitionSpeed: 'default',
+multiplex: {
+    secret: '', // null if client
+    id: '', // id, obtained from socket.io server
+    url: '' // Location of socket.io server
+},
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: './reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }]
+});
+</script>
+</body>
+</html>

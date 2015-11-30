@@ -466,7 +466,7 @@
   ([{:keys [sum count]}]
    (/ sum count)))
 
-(defn fuse [named-steps]
+#_(defn fuse [named-steps]
   (fn ([]
       (reduce (fn [m [k v]]
                 (assoc m k (v))) {} named-steps))
@@ -477,7 +477,7 @@
      (reduce (fn [m [k v]]
                (update-in m [k] v)) accum named-steps))))
 
-(defn combine [named-steps]
+#_(defn combine [named-steps]
   (let [f (fuse named-steps)]
     (fn
       ([] (f))
@@ -493,7 +493,7 @@
     ([accum] accum)))
 
 
-(transduce (comp (map inc))
+#_(transduce (comp (map inc))
            (fuse {:one + :two +})
            (range 10))
 
@@ -529,7 +529,7 @@
               (combine {:one +})
             (map #(hash-map :x %) (range 10)))
 
-(m/standard-deviation)
+
 
 #_{:reducer-identity (constantly [0 0 0])
    :reducer (fn count-mean-sq [[count mean sum-of-squares] x]
@@ -549,22 +549,12 @@
                     (+ sq sq2 (/ (* (- m2 m) (- m2 m) c c2) count))])))
    :post-combiner (fn vardiv [x] (double (/ (last x) (core/max 1 (dec (first x))))))}
 
-(defn sd-step
-  ([] [0 0 0])
-  ([[count mean sum-of-squares] x]
-   (let [count' (inc count)
-         mean'  (+ mean (/ (- x mean) count'))]
-     [count'
-      mean'
-      (+ sum-of-squares (* (- x mean') (- x mean)))]))
-  ([[count mean sum-of-squares]]
-   (/ sum-of-squares (max 1 (dec count)))))
 
-(defn project [fns step]
+#_(defn project [fns step]
   (fuse (into {} (map #(vector % ((map %) step)) fns))))
 
 ;; comp (take 2) doesn't work - use reduced?
-(let [step (fuse {:mean mean-step
+#_(let [step (fuse {:mean mean-step
                   :iqr  hist-iqr
                   :sd   sd-step})]
   (transduce (map identity)
@@ -576,17 +566,31 @@
     (-> (f x)
         (cdf-normal :mean mean :sd sd))))
 
+(defn simple-juxt [& rfns]
+  (fn
+    ([]      (mapv (fn [f]   (f))     rfns))
+    ([acc]   (mapv (fn [f a] (f a))   rfns acc))
+    ([acc x] (mapv (fn [f a] (f a x)) rfns acc))))
+
 (defn juxt [& rfns]
-  (let [rfns (vec rfns)]
-    (fn
-      ([] (mapv #(vector % (volatile! (%))) rfns))
-      ([acc] (mapv (fn [[rf vacc]] (rf (unreduced @vacc))) acc))
-      ([acc x]
-       (let [some-unreduced (reduce (fn [some-unreduced [rf vacc]] 
-                                      (when-not (reduced? @vacc)
-                                        (vswap! vacc rf x) true))
-                                    false acc)]
-         (if some-unreduced acc (reduced acc)))))))
+  (fn
+    ([]    (mapv (fn [f] (f)) rfns))
+    ([acc] (mapv (fn [f a] (f (unreduced a))) rfns acc))
+    ([acc x]
+     (let [all-reduced? (volatile! true)
+           results (mapv (fn [f a]
+                           (if (reduced? a) a
+                               (do (vreset! all-reduced? false)
+                                   (f a x))))
+                         rfns acc)]
+       (if @all-reduced? (reduced results) results)))))
+
+(defn fuse [kvs]
+  (let [rfns (vals kvs)
+        rf   (apply juxt rfns)]
+    (completing rf #(zipmap (keys kvs) (rf %)))))
+
+
 
 (def normal-step
   (juxt mean-step sd-step))
@@ -605,11 +609,27 @@ completing
     ([x] (f (rf x)))
     ([x y] (rf x y))))
 
+(defn variance
+  ([] [0 0 0])
+  ([[count mean sum-of-squares]]
+   (/ sum-of-squares (max 1 (dec count))))
+  ([[count mean sum-of-squares] x]
+   (let [count' (inc count)
+         mean'  (+ mean (/ (- x mean) count'))]
+     [count' mean'
+      (+ sum-of-squares (* (- x mean') (- x mean)))])))
+
+(defn sqrt [x]
+  (Math/sqrt x))
+
+(def standard-deviation
+  (completing variance #(sqrt (variance %))))
+
 (defn facet [rf fns]
-  (->> (mapv (fn [f] (wrapping rf f)) fns)
+  (->> (map (fn [f] ((map f) rf)) fns)
        (apply juxt)))
 
-(transduce (comp (map identity) (take 10)) (fuse {:mean mean-step :hist hist-iqr}) (range 1000))
+#_(transduce (comp (map identity) (take 10)) (fuse {:mean mean-step :hist hist-iqr}) (range 1000))
 
 (defn transmap [xform f g xs]
   (let [reduced (transduce xform f xs)
@@ -663,11 +683,43 @@ completing
    (facet mean-step [n d])
    (fn [[n d]] (if (zero? d) 0 (/ n d)))))
 
-(let [f (weighted-avg :a :b)]
- (reduce f (f) [{:a 1 :b 2} {:a 4 :b 8}]))
+(defn weighted-mean [nf df]
+  (let [rf (facet mean-step [nf df])]
+    (completing rf (fn [x]
+                     (let [[n d] (rf x)]
+                       (if (zero? d) 0
+                           (/ n d)))))))
+
+#_(let [f (weighted-avg :a :b)]
+    (reduce f (f) [{:a 1 :b 2} {:a 4 :b 8}]))
+
+#_(let [rf (facet (fuse {:mean mean-step
+                       :sd   standard-deviation})
+                [:a :b])]
+  (transduce (map identity) rf (load-data "data.edn")))
 
 ;; Can't just pass a transduce to r/fold. Doesn't complete.
 
 ;; Step function must honour reduced.
 ;; Naive implementation of juxt wont.
 
+(def fields [:a :b])
+
+(def summary-stats
+  (-> (fuse {:mean mean-step
+             :sd   standard-deviation})
+      (facet fields)))
+
+(defn normalise
+  [stats]
+  (let [stats (zipmap fields stats)
+        f (fn [x [field {:keys [mean sd]}]]
+            (update-in x [field] cdf-normal :mean mean :sd sd))]
+    (map #(reduce f % stats))))
+
+(defn transform [xform f g xs]
+  (comp xform (g (transduce xform f xs))))
+
+(let [data (load-data "data.edn")]
+  (-> (filter relevant?)
+      (transform summary-stats normalise data)))

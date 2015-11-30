@@ -1,0 +1,58 @@
+#+Title: Expressive Parallel Analytics in Clojure
+#+Author:
+#+Email:
+
+#+REVEAL_THEME: zenburn
+#+OPTIONS: num:nil toc:nil reveal_mathjax:t reveal_history:t reveal_control:nil reveal_progress:nil reveal_center:nil
+#+REVEAL_TRANS: none
+#+REVEAL_PLUGINS: (highlight)
+
+* Who am I?
+
+#+BEGIN_NOTES
+- Was CTO of medium-sized data analytics company
+- Switched to Clojure 4 years ago
+- Left to write a book 1 year ago
+- Now a freelance data scientist and data engineer
+#+END_NOTES
+
+* Mission-critical data
+
+[[./images/mastodon.png]]
+
+[[./images/the-wur.png]]
+
+#+BEGIN_NOTES
+- Released a few weeks ago
+- New methodology
+- New implementation
+- Clojure!
+#+END_NOTES
+
+* Stats
+
+https://www.timeshighereducation.com/news/ranking-methodology-2016
+
+- 13 performance indicators
+- 10 quotient indicators
+- 4  weighted quotients across 6 subjects
+- 800+ institutions
+- 7  ranking tables
+
+#+BEGIN_NOTES
+- Won't speak in detail about methodology
+- Gives a flavour for the kinds of problems I'm addressing.
+#+END_NOTES
+* Clojure
+#+BEGIN_SRC clojure
+(->> (load-data "data.edn")
+     (transduce (comp xform (map :score)) +))
+
+;; 1215.0
+#+END_SRC
+
+#+BEGIN_NOTES
+
+Hello
+#+END_NOTES
+* Clojure II

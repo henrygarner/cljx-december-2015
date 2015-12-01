@@ -1,4 +1,4 @@
-#+Title: Expressive Parallel Analytics with Transducers
+#+Title: Expressive Parallel Analytics with Transducers (or Transducers from the bottom up)
 #+Author:
 #+Email:
 
@@ -47,6 +47,8 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 #+BEGIN_NOTES
 - Won't speak in detail about methodology
 - Gives a flavour for the kinds of problems I'm addressing.
+
+- This is annoying-sized data.
 #+END_NOTES
 
 * Annoying-sized data
@@ -54,7 +56,6 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 #+BEGIN_NOTES
 - Not large enough for Hadoop
 - Large enough to be worth optimizing
-
 
 #+END_NOTES
 
@@ -80,6 +81,109 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 - This is data engineering
 - Want to productionise sexy algorithm
 - Maybe you're building an intricate data processing system
+#+END_NOTES
+
+* Mean
+
+#+BEGIN_SRC clojure
+(defn mean [xs]
+  (let [sum   (reduce + xs)
+        count (count xs)]
+    (when-not (zero? count)
+      (/ sum count))))
+#+END_SRC
+
+#+BEGIN_NOTES
+Super-simple mean function.
+But we make two passes over the data.
+
+Not a problem on a small example.
+But bigger sequences make this problematic.
+#+END_NOTES
+
+* Reduce
+
+#+BEGIN_SRC clojure
+(defn mean-reducer [accum x]
+  (-> (update-in accum [:sum] + x)
+      (update-in [:count] inc)))
+
+(reduce mean-reducer (range 10))
+#+END_SRC
+
+#+BEGIN_NOTES
+- So we might write a reducing functinon.
+- For each x we add the value to the sum and increment the count.
+
+- What will this return?
+#+END_NOTES
+
+* :(
+
+#+BEGIN_SRC clojure
+1. Unhandled java.lang.NullPointerException
+   (No message)
+
+                  Numbers.java: 1013  clojure.lang.Numbers/ops
+                  Numbers.java:  128  clojure.lang.Numbers/add
+                      core.clj:  957  clojure.core/+
+                      AFn.java:  156  clojure.lang.AFn/applyToHelper
+                   RestFn.java:  132  clojure.lang.RestFn/applyTo
+                      core.clj:  632  clojure.core/apply
+                      core.clj: 5923  clojure.core/update-in
+                   RestFn.java:  467  clojure.lang.RestFn/invoke
+                          REPL:    2  example.core/mean-r
+                LongRange.java:  222  clojure.lang.LongRange/reduce
+                      core.clj: 6514  clojure.core/reduce
+                          REPL:    1  example.core/eval100286
+#+END_SRC
+
+* Reduce
+
+#+BEGIN_SRC clojure
+(defn mean-reducer [accum x]
+  (-> (update-in accum [:sum] + x)
+      (update-in [:count] inc)))
+
+(reduce mean-reducer {:sum 0 :count 0} (range 10))
+
+;; => {:sum 45, :count 10}
+#+END_SRC
+
+#+BEGIN_NOTES
+- If first element of the sequence can't function as accum
+- Must pass explicit init.
+#+END_NOTES
+
+* Reducing function lifecycle
+
+1. Init
+2. Step (0..n)
+3. Complete
+
+* Mean reducing function
+
+#+BEGIN_SRC clojure
+(defn mean
+    ([] {:sum 0 :count 0})
+    ([{:keys [sum count]}]
+      (/ sum count))
+    ([accum x]
+     (-> (update-in accum [:count] inc)
+         (update-in [:sum] + x))))
+
+
+   (transduce (comp xform (map :score)) mean-step))
+  ;; 405.0
+#+END_SRC
+
+#+BEGIN_NOTES
+- Once again:
+- init
+- step
+- completion
+
+NB: mean-step - will refer to later
 #+END_NOTES
 
 * Thread-last
@@ -383,32 +487,6 @@ https://github.com/HdrHistogram/HdrHistogram
 - Let's assume we want to calculate mean...
 #+END_NOTES
 
-* Mean reducing function
-
-#+BEGIN_SRC clojure
-  (defn mean
-    ([] {:sum 0 :count 0})
-    ([{:keys [sum count]}]
-     (/ sum count))
-    ([accum x]
-     (-> (update-in accum [:count] inc)
-         (update-in [:sum] + x))))
-
-
-  (->> (load-data "data.edn")
-       (transduce (comp xform (map :score)) mean-step))
-
-  ;; 405.0
-#+END_SRC
-
-#+BEGIN_NOTES
-- Once again:
-- init
-- step
-- completion
-
-NB: mean-step - will refer to later
-#+END_NOTES
 
 * Variance step function
 
@@ -487,6 +565,34 @@ What if we want to calculate the mean and the standard deviation?
 
 - Each step function maintains its own accumulator
 #+END_NOTES
+
+* :(
+
+#+BEGIN_SRC text
+1. Unhandled java.lang.NullPointerException
+   (No message)
+
+                  Numbers.java: 1013  clojure.lang.Numbers/ops
+                  Numbers.java:  112  clojure.lang.Numbers/inc
+                      core.clj:  892  clojure.core/inc
+                      AFn.java:  154  clojure.lang.AFn/applyToHelper
+                      AFn.java:  144  clojure.lang.AFn/applyTo
+                      core.clj:  632  clojure.core/apply
+                      core.clj: 5923  clojure.core/update-in
+                   RestFn.java:  445  clojure.lang.RestFn/invoke
+                     sweet.clj:   73  example.sweet/mean
+                      core.clj: 2464  clojure.core/juxt/fn
+                      core.clj: 2611  clojure.core/map/fn/fn
+                 protocols.clj:  167  clojure.core.protocols/fn
+                 protocols.clj:   19  clojure.core.protocols/fn/G
+                 protocols.clj:   31  clojure.core.protocols/seq-reduce
+                 protocols.clj:  101  clojure.core.protocols/fn
+                 protocols.clj:   13  clojure.core.protocols/fn/G
+                      core.clj: 6590  clojure.core/transduce
+                      core.clj: 6585  clojure.core/transduce
+                          REPL:    2  example.sweet/eval36934
+
+#+END_SRC
 
 * Juxt
 
@@ -922,32 +1028,10 @@ solve(problem):
 :CUSTOM_ID: paradiso
 :END:
 
-* Anatomy of a transducer
-
-#+BEGIN_SRC clojure
-(defn filter' [pred]
-  (fn [rf]
-    (fn
-      ([] (rf))
-      ([result] (rf result))
-      ([result input]
-       (if (pred input)
-         (rf result input)
-         result)))))
-
-(transduce (filter' even?) conj [1 2 3 4 5 6])
-
-;; [2 4 6]
-#+END_SRC
-
-#+BEGIN_NOTES
-- transducers are just functions of 3 arities
-- arity zero is init
-- arity one is completion
-- arity two is the reducing function
-- all just function composition
-- these ideas are general
-#+END_NOTES
+* But is it parallel?
+:PROPERTIES:
+:reveal_background: ./images/multineck/billbailey.jpg
+:END:
 
 * Enter core.async
 
@@ -1042,4 +1126,9 @@ http://cljds.com/cljds-amzn
 * References
 
 https://github.com/cgrand/xforms
+
 https://github.com/aphyr/tesser
+
+* Questions?
+
+* Lunch!

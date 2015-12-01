@@ -122,6 +122,54 @@
     (->> data
          (sequence (comp xform (filter #(<= from (:score %) to)))))))
 
+#_(defn mean-r [accum x]
+  (-> (update-in accum [:sum] + x)
+      (update-in [:count] inc)))
+
+#_(reduce mean-r (range 10))
+
+#_(let [sum   (reduce + xs)
+      count (count xs)]
+  (when-not (zero? count)
+    (/ sum count)))
+
+#_(reduce mean-r {:sum 0 :count 0} (range 10))
+
+(defn mean [xs]
+  (let [sum   (reduce + xs)
+        count (count xs)]
+    (when-not (zero? count)
+      (/ sum count))))
+
+(defn fold [n reducef combinef in]
+  (let [reduced (async/chan n)]
+    (->> (for [_ (range n)]
+           (async/reduce reducef (reducef) in))
+         (async/merge)
+         (async/pipeline 10 reduced (map f)))
+    (async/go
+      (->> (async/reduce combinef (combinef) reduced)
+           (async/<!)
+           (combinef)))))
+
+(defn fold [n f g in]
+  (->> (for [_ (range n)]
+         (async/reduce f (f) in))
+       (async/merge)
+       (async/map< f)
+       (async/reduce g (g))
+       (async/map< g)))
+
+;; (async/<!! (async/reduce + (+) (async/onto-chan (async/chan 100) (range 100))))
+
+#_(async/go
+  (let [resp (let [xs (range 100)
+                   n  10
+                   in (async/chan n)]
+               (async/onto-chan in xs)
+               (pipeline-r n + + in))]
+    (println (async/<! resp))))
+
 
 (defn mean-step
   ([] {:sum 0 :count 0})
@@ -371,7 +419,7 @@
 
 ;; Pipeline
 
-(defn pipeline-r [n f g xs]
+#_(defn pipeline-r [n f g xs]
   (let [in (async/chan n)]
     (async/onto-chan in xs)
     (->> (for [_ (range n)]
@@ -577,12 +625,12 @@
     ([]    (mapv (fn [f] (f)) rfns))
     ([acc] (mapv (fn [f a] (f (unreduced a))) rfns acc))
     ([acc x]
-     (let all-reduced? (volatile! true)
-          results (mapv (fn [f a]
-                          (if (reduced? a) a
-                              (do (vreset! all-reduced? false)
-                                  (f a x))))
-                        rfns acc)
+     (let [all-reduced? (volatile! true)
+           results (mapv (fn [f a]
+                           (if (reduced? a) a
+                               (do (vreset! all-reduced? false)
+                                   (f a x))))
+                         rfns acc)]
        (if @all-reduced? (reduced results) results)))))
 
 (defn fuse [kvs]
@@ -591,7 +639,7 @@
     (completing rf #(zipmap (keys kvs) (rf %)))))
 
 (def normal-step
-  (juxt mean-step sd-step))
+  (juxt mean-step))
 
 completing
 
@@ -638,7 +686,7 @@ completing
 ;; Can calculate on summary of data on sample of data
 
 
-(def weighted-mean-seq
+#_(def weighted-mean-seq
   (transduce (map identity) (weighted-mean :a :b) (load-data "data.edn")))
 
 (def  ks [:a :b])

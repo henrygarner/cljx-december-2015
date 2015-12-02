@@ -758,8 +758,6 @@ completing
 
 (transduce (map identity) summary-stats (range 100))
 
-
-
 (def fields [:a :b])
 
 (def summary-stats
@@ -780,3 +778,13 @@ completing
 (let [data (load-data "data.edn")]
   (-> (filter relevant?)
       (transform summary-stats normalise data)))
+
+
+(defn in-range [f from to]
+  (filter #(>= from (f %) to)))
+
+#_(defn []
+  (-> (comp xform (map :score))
+      (transform histogram-iqr in-range data)
+      (transform mean identity data)))
+

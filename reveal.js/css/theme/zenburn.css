@@ -287,13 +287,22 @@ body {
   -moz-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
   transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985); }
 
+#slide-pedal {
+  height: 100% !important;
+  font-size: 0.5em;
+  position: absolute !important;
+  top: 0 !important;
+  color: #CCC; }
+  #slide-pedal a {
+    color: inherit !important; }
+
 pre.src {
   display: block;
   padding: 1em;
   color: #DCDCDC;
   line-height: 1.2em;
   box-shadow: none;
-  font-size: 0.67em; }
+  font-size: 0.8em; }
 
 ul > li {
   line-height: 1.6em !important; }

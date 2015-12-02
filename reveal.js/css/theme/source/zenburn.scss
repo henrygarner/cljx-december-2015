@@ -58,6 +58,27 @@ $linkColor: #0433ff;
 @import "../template/theme";
 // ---------------------------------------------
 
+#slide-pedal {
+    height: 100% !important;
+    font-size: 0.5em;
+    position: absolute !important;
+    top: 0 !important;
+    color: #CCC;
+    a {
+      color: inherit !important;
+    }
+}
+
+// #slide-pedal {
+//   height: 100%;
+//   color: black;
+//   position: relative;
+//   left: -50%;
+//   bottom: -50%;
+//   a {
+//     color: black !important;
+//   }
+// }
 
 pre.src {
     display: block;
@@ -66,7 +87,7 @@ pre.src {
     color: #DCDCDC;
     line-height: 1.2em;
     box-shadow: none;
-    font-size: 0.67em;
+    font-size: 0.8em;
 }
 
 ul > li {

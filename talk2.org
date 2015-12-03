@@ -1,11 +1,16 @@
-#+Title: Expressive Parallel Analytics with Transducers (or Transducers from the bottom up)
+#+Title: Expressive Parallel Analytics with Clojure
 #+Author:
-#+Email:
+#+Email: @henrygarner
 
 #+REVEAL_THEME: zenburn
 #+REVEAL_EXTRA_CSS: ./extra.css
 #+OPTIONS: num:nil toc:nil reveal_mathjax:t reveal_history:t reveal_control:nil reveal_progress:nil reveal_center:true reveal_slide_number:nil
 #+REVEAL_TRANS: none
+
+#+BEGIN_NOTES
+Transducers from the bottom up
+Fun with Reducing functions
+#+END_NOTES
 
 * Mission-critical analysis
 
@@ -38,10 +43,14 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 - Won't speak in detail about methodology
 - Gives a flavour for the kinds of problems I'm addressing.
 
-- This is annoying-sized data.
+This isn't BIG DATA
 #+END_NOTES
 
 * Annoying-sized data
+
+#+ATTR_REVEAL: :frag appear
+[[./images/bruce.jpg]]
+
 
 #+BEGIN_NOTES
 - Not large enough for Hadoop
@@ -121,8 +130,12 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
 #+END_SRC
 
 * 
+:PROPERTIES:
+:CUSTOM_ID: pedals
+:reveal_background: ./images/pedals/4462883383_a3ed642205_o.jpg
+:END:
 
-;; PICTURE OF EFFECTS BOARD
+CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/4462883383/
 
 * 
 
@@ -135,8 +148,10 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
 #+END_SRC
 
 * 
-
-;; PICTURE OF EFFECTS BOARD HOOKED TO GUITAR
+:PROPERTIES:
+:CUSTOM_ID: guitar
+:reveal_background: ./images/guitars/4779928776_0783c072fe_o.jpg
+:END:
 
 * 
 
@@ -153,18 +168,37 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
 ;; (175.0 800.0 240.0)
 #+END_SRC
 
+#+BEGIN_NOTES
+Both of these things are sequences
+#+END_NOTES
+
+* 
+:PROPERTIES:
+:CUSTOM_ID: amp
+:reveal_background: ./images/amps/combo-amp.jpg
+:END:
+
 * 
 
 #+BEGIN_SRC clojure
+(def scores
+  (comp xform (map :score)))
+
 (->> (load-data "data.edn")
-     (transduce (comp xform (map :score)) +))
+     (transduce scores +))
 
 ;; 1215.0
 #+END_SRC
 
-* 
+#+BEGIN_NOTES
+Step functions FTW
+#+END_NOTES
 
-;; PICTURE OF GUITAR HOOKED TO SOMETHING ELSE
+* 
+:PROPERTIES:
+:CUSTOM_ID: tesla
+:reveal_background: ./images/amps/Tesla-Coil-lighting-stunt-with-guitar.jpg
+:END:
 
 * 
 
@@ -179,60 +213,133 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
 * 
 
 #+BEGIN_SRC clojure
-(defn mean-reducer [accum x]
+(defn mean [accum x]
   (-> (update-in accum [:sum] + x)
       (update-in [:count] inc)))
 
-#_(reduce mean-reducer (range 10))
+(reduce mean (range 10))
+
+;; => ...?
+#+END_SRC
+
+#+BEGIN_NOTES
+What will happen?
+#+END_NOTES
+
+* 
+#+BEGIN_SRC text
+1. Unhandled java.lang.NullPointerException
+   (No message)
+
+       Numbers.java: 1013  clojure.lang.Numbers/ops
+       Numbers.java:  112  clojure.lang.Numbers/inc
+           core.clj:  892  clojure.core/inc
+           AFn.java:  154  clojure.lang.AFn/applyToHelper
+           AFn.java:  144  clojure.lang.AFn/applyTo
+           core.clj:  632  clojure.core/apply
+           core.clj: 5923  clojure.core/update-in
+        RestFn.java:  445  clojure.lang.RestFn/invoke
+          sweet.clj:  242  example.sweet/mean-reducer
+     LongRange.java:  222  clojure.lang.LongRange/reduce
+           core.clj: 6514  clojure.core/reduce
+               REPL:    1  example.sweet/eval28337
+
 #+END_SRC
 
 * 
+:PROPERTIES:
+:CUSTOM_ID: slug1
+:reveal_background: ./images/slugs/ss1.jpg
+:END:
 
-;; PICTURE OF GUITAR SLUG
+http://slugsolos.tumblr.com/
 
 * 
 
 #+BEGIN_SRC clojure
-(reduce mean-reducer {:sum 0 :count 0} (range 10))
+(reduce mean {:sum 0 :count 0} (range 10))
 
-;; { ... }
+;; => {:sum 45, :count 10}
 #+END_SRC
 
 * 
 
 #+BEGIN_SRC clojure
 (defn mean
+  ;; Init
   ([] {:sum 0 :count 0})
-  ([{:keys [sum count]}]
-   (when-not (zero? count)
-     (/ sum count)))
+  
+  ;; Step
   ([accum x]
    (-> (update-in accum [:count] inc)
        (update-in [:sum] + x))))
 
-(mean (reduce mean (mean) (range 10)))
+
+(reduce mean (mean) (range 10))
+
+;; => {:sum 45, :count 10}
 #+END_SRC
 
 * 
 
+#+BEGIN_SRC clojure
+(defn mean
+  ;; Init
+  ([] {:sum 0 :count 0})
+
+  ;; Step
+  ([accum x]
+   (-> (update-in accum [:count] inc)
+       (update-in [:sum] + x)))
+
+  ;; Complete
+  ([{:keys [sum count]}]
+   (when-not (zero? count)
+     (/ sum count))))
+
+
+(mean (reduce mean (mean) (range 10)))
+
+;; => 9/2
+#+END_SRC
+
+#+BEGIN_NOTES
+This is what transduce does
+#+END_NOTES
+
+* 
 #+BEGIN_SRC clojure
 (transduce (map identity) mean (range 10))
+
+;; => 9/2
 #+END_SRC
+
+#+BEGIN_NOTES
+Get this behaviour for free
+
+What is identity transducer?
+#+END_NOTES
+
+* What is the identity transducer?
 
 * 
 
-#+ATTR_REVEAL: :frag (appear appear appear) :frag_idx (1 2 3)
-
 #+BEGIN_SRC clojure
-(defn identity-transducer [rf]
-  (fn
-    ([]      (rf))         ;; Init
-    ([acc]   (rf acc))     ;; Complete
-    ([acc x] (rf acc x)))) ;; Step
+  (defn identity-transducer [rf]
+    (fn
+      ([]      (rf))         ;; Init
+      ([acc]   (rf acc))     ;; Complete
+      ([acc x] (rf acc x)))) ;; Step
+#+END_SRC
 
-(defn identity-transducer [rf] rf)
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
+  (defn identity-transducer [rf] rf)
+#+END_SRC
 
-(def identity-transducer identity)
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
+  (def identity-transducer identity)
 #+END_SRC
 
 * 
@@ -243,104 +350,176 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
 
 * 
 
-#+BEGIN_SRC clojure
-;; What is this?
-(->> (load-data "data.edn")
-     (transduce (comp xform (map :score)) mean))
-#+END_SRC
-
-* 
-
 https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 
 #+BEGIN_SRC clojure
-(defn variance
-  ([] [0 0 0])
-  ([ [count mean sum-of-squares] ]
-   (/ sum-of-squares (max 1 (dec count))))
-  ([[count mean sum-of-squares] x]
-   (let [count' (inc count)
-         mean'  (+ mean (/ (- x mean) count'))]
-     [count' mean'
-      (+ sum-of-squares (* (- x mean') (- x mean)))])))
+  (defn variance
+    ;; Init
+    ([] [0 0 0])
+ 
+    ;; Step
+    ([[count mean sum-of-squares] x]
+     (let [count' (inc count)
+           mean'  (+ mean (/ (- x mean) count'))]
+       [count' mean'
+        (+ sum-of-squares (* (- x mean') (- x mean)))]))
 
-(->> (load-data "data.edn")
-     (transduce (comp xform (map :score)) variance))
+    ;; Complete
+    ([[count mean sum-of-squares]]
+     (/ sum-of-squares (max 1 (dec count)))))
 #+END_SRC
 
 * 
+#+BEGIN_SRC clojure
+  (->> (load-data "data.edn")
+       (transduce scores variance))
+       
+  ;; => 118075.0
+#+END_SRC
 
-;; IMAGE OF BELL CURVE
+#+BEGIN_NOTES
+Variance is useful, but we usually want standard deviation
+#+END_NOTES
 
 * 
 
-;; Completing
+[[./images/normal-curve.png]]
+
+* 
+
 #+BEGIN_SRC clojure
 (def standard-deviation
   (completing variance #(Math/sqrt (variance %))))
 #+END_SRC
 
+#+BEGIN_NOTES
+Completing introduced in Clojure 1.7
+
+Want to calculate mean and standard deviation
+At the same time.
+Variance is a black box
+#+END_NOTES
+
 * 
 
-;; Normalization
 #+BEGIN_SRC clojure
 (->> (load-data "data.edn")
-     (sequence (map (juxt :a :b))))
+     (map (juxt :a :b)))
 
 ;; ([90 50] [80 80] [60 40] [50 70])
 #+END_SRC
 
+#+BEGIN_NOTES
+Might try and do this with step functions
+#+END_NOTES
+
 * 
 #+BEGIN_SRC clojure
 (->> (load-data "data.edn")
-     (transduce (map :score) (juxt mean standard-deviation)))
+     (transduce (map :a) (juxt mean standard-deviation)))
+
+;; => ?
 #+END_SRC
 
 * 
+:PROPERTIES:
+:CUSTOM_ID: slug2
+:reveal_background: ./images/slugs/rUF67Fd.jpg
+:END:
 
-;; PICTURE OF GUITAR SLUG
+http://slugsolos.tumblr.com/
 
 * 
 
 #+BEGIN_SRC clojure
-(defn juxt-reducer [& rfns]
+(defn juxt-r [& rfns]
   (fn
     ([]      (mapv (fn [f]   (f))     rfns))
     ([acc]   (mapv (fn [f a] (f a))   rfns acc))
     ([acc x] (mapv (fn [f a] (f a x)) rfns acc))))
 
 (def rf
-  (juxt-reducer + conj))
+  (juxt-r + conj))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (transduce identity rf (range 10))
+
+;; => [45 [0 1 2 3 4 5 6 7 8 9]]
+
 #+END_SRC
 
 * 
 
 #+BEGIN_SRC clojure
 (def rf
-  (juxt-reducer + ((take 3) conj)))
+  (juxt-r + ((take 3) conj)))
 
 (transduce identity rf (range 10))
+
+;; => ...?
+;;
 #+END_SRC
 
 * 
 
-;; PICTURE OF GUITAR SLUG
+#+BEGIN_SRC clojure
+(def rf
+  (juxt-r + ((take 3) conj)))
+
+(transduce identity rf (range 10))
+
+;; => [45 #object[clojure.lang.Reduced {:status :ready,
+;;                                      :val [0 1 2]}]]
+#+END_SRC
+
+* 
+:PROPERTIES:
+:CUSTOM_ID: slug3
+:reveal_background: ./images/slugs/tumblr_n9jjkbfgE21thoekio1_500.jpg
+:END:
+
+
+#+BEGIN_NOTES
+What's going on inside take?
+#+END_NOTES
 
 * 
 
 #+BEGIN_SRC clojure
-(defn juxt-reducer [& rfns]
+  (defn take [n]
+    (fn [rf]
+      (let [nv (volatile! n)]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+           (let [n @nv
+                 nn (vswap! nv dec)
+                 result (if (pos? n)
+                          (rf result input)
+                          result)]
+             (if (not (pos? nn))
+               (ensure-reduced result)
+               result)))))))
+#+END_SRC
+
+* 
+
+#+BEGIN_SRC clojure
+(defn juxt-r [& rfns]
   (fn
     ([]    (mapv (fn [f] (f)) rfns))
     ([acc] (mapv (fn [f a] (f (unreduced a))) rfns acc))
     ([acc x]
      (let [all-reduced? (volatile! true)
            results (mapv (fn [f a]
-                           (if (reduced? a) a
-                               (do (vreset! all-reduced? false)
-                                   (f a x))))
+                           (if-not (reduced? a)
+                             (do (vreset! all-reduced?
+                                          false)
+                                 (f a x))
+                             a))
                          rfns acc)]
        (if @all-reduced? (reduced results) results)))))
 #+END_SRC
@@ -349,21 +528,48 @@ https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 
 #+BEGIN_SRC clojure
 (def rf
-  (juxt-reducer + ((take 3) conj)))
+  (juxt-r + ((take 3) conj)))
 
 (transduce identity rf (range 10))
 
-;; [45 [0 1 2]]
-
-;; reveal...
-(transduce identity rf (range 10))
-
-;; [45 []]
+;; => [45 [0 1 2]]
 #+END_SRC
+
+#+ATTR_REVEAL: :frag appear
+...but...
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
+(transduce identity rf (range 10))
+
+;; => [45 []]
+#+END_SRC
+
+#+BEGIN_NOTES
+Don't alias a stateful transducer / reducing function
+#+END_NOTES
+
+* 
+:PROPERTIES:
+:CUSTOM_ID: clash
+:reveal_background: ./images/clash.jpg
+:END:
 
 * 
 
-PICTURE OF SOMETHING STATEFUL?
+#+BEGIN_SRC clojure
+(def rf
+  ((map inc) +))
+
+(transduce identity rf (range 10))
+
+;; => 55
+#+END_SRC
+
+#+BEGIN_NOTES
+There's nothing wrong with this
+
+In fact it opens up possibilities
+#+END_NOTES
 
 * 
 
@@ -374,12 +580,24 @@ PICTURE OF SOMETHING STATEFUL?
 
 (def rf
   (facet + [:a :b]))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (->> (load-data "data.edn")
      (transduce identity rf))
 
 ;; => [280 240]
 #+END_SRC
+
+#+BEGIN_NOTES
+A and b are just ordinary functions
+They will be applied independently to the input
+
+Compare to juxt.
+
+What can we do with this?
+#+END_NOTES
 
 * 
 
@@ -390,12 +608,19 @@ PICTURE OF SOMETHING STATEFUL?
                      (let [[n d] (rf x)]
                        (when-not (zero? d)
                            (/ n d)))))))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (->> (load-data "data.edn")
      (transduce identity (weighted-mean :a :b)))
 
 ;; => 7/6
 #+END_SRC
+
+#+BEGIN_NOTES
+What else could we do by wrapping juxt-r?
+#+END_NOTES
 
 * 
 
@@ -408,7 +633,10 @@ PICTURE OF SOMETHING STATEFUL?
 (def rf
   (fuse {:mean mean
          :sd   standard-deviation}))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (->> (load-data "data.edn")
      (transduce (map :a) rf))
 
@@ -424,89 +652,131 @@ PICTURE OF SOMETHING STATEFUL?
                   (fuse {:mean mean
                          :sd   standard-deviation})
                   [:a :b])}))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag reveal
+#+BEGIN_SRC clojure
 (->> (load-data "data.edn")
      (transduce xform rf))
+
+;; {:mean-score 405.0,
+;;  :fields [{:mean 204.16666666666666,
+;;            :sd 169.71176545346918}
+;;           {:mean 200.83333333333334,
+;;            :sd 176.78258775494078}]}
 #+END_SRC
 
-* 
+* Success!
+:PROPERTIES:
+:CUSTOM_ID: hero
+:reveal_background: ./images/guitars/funny-guitar-hero-kid.jpg
+:END:
 
-;; IMAGE SHOWING REDUCE COMBINE
+* Hey, where's my parallelism?
 
-* 
+* Reducers
 
-#+BEGIN_SRC clojure
-(require '[clojure.core.reducers :as r])
-
-(defn mean-reducer
-  ([] {:sum 0 :count 0})
-  ([{:keys [sum count]}]
-   (/ sum count))
-  ([accum x]
-   (-> (update-in accum [:count] inc)
-       (update-in [:sum] + x))))
-
-(defn mean-combiner
-  ;; Combiner is used for init value
-  ([] {:sum 0 :count 0})
-  ([{:keys [sum count]}]
-   (/ sum count))
-  ([a b]
-   (merge-with + a b)))
-
-(->> (load-data "data.edn")
-     (sequence (comp xform (map :score)))
-     (r/fold mean-combiner mean-reducer))
+#+BEGIN_SRC txt
+solve(problem):
+    if problem is small enough:
+        solve problem directly (sequential algorithm)
+    else:
+        for part in subdivide(problem)
+            fork subtask to solve part
+        join all subtasks spawned in previous loop
+        combine results from subtasks
 #+END_SRC
 
+#+BEGIN_NOTES
+Clojure 1.5
+#+END_NOTES
+
 * 
 
-;; IMAGE OF STEVE VAI
+[[./images/reductions-tree.png]]
 
 * 
 
+[[./images/reduce-combine.png]]
+
+* The Interquartile Range
+
+[[./images/iqr.png]]
+
+* 
 #+BEGIN_SRC clojure
-(defn histogram-reducer
+(import '[org.HdrHistogram DoubleHistogram])
+
+(defn iqr-reducer
   ([] (DoubleHistogram. 1e8 3))
   ([hist x] (doto hist (.recordValue x))))
 
-(defn histogram-combiner
+(defn iqr-combiner
   ([] (DoubleHistogram. 1e8 3))
+  ([a b] (doto a (.add b)))
   ([hist]
    (vector (.getValueAtPercentile hist 25)
-           (.getValueAtPercentile hist 75)))
-  ([a b] (doto a (.add b))))
+           (.getValueAtPercentile hist 75))))
+#+END_SRC
 
+* 
+#+BEGIN_SRC clojure
 (->> (load-data "data.edn")
-     (sequence (comp xform (map :score)))
-     (r/fold histogram-combiner histogram-reducer))
+     (eduction xform (map :score))
+     (r/fold iqr-combiner iqr-reducer))
+
+
+;; => #object[org.HdrHistogram.DoubleHistogram]
 #+END_SRC
+
+#+BEGIN_NOTES
+Combinef provides init value
+Combinef must be associative
+#+END_NOTES
+
+* 
+#+BEGIN_SRC clojure
+(->> (load-data "data.edn")
+     (eduction xform (map :score))
+     (r/fold iqr-combiner iqr-reducer)
+     (iqr-combiner))
+
+;; => [175.0 240.0]
+#+END_SRC
+
+#+BEGIN_NOTES
+Combinef provides init value
+Combinef must be associative!
+#+END_NOTES
+
+* 
+:PROPERTIES:
+:CUSTOM_ID: parallel
+:reveal_background: ./images/multineck/SteveVai_081114.jpg
+:END:
+
+* core.async
+
+"The conveyor belt of awesomeness"
+-- Kris Jenkins
+
+* Where's our cuddly toy? 
+
+- reduce
+- map>
+- pipeline
+
+* Where's our cuddly toy?  
+
+- reduce
+- +map>+
+- pipeline
 
 * 
 
 #+BEGIN_SRC clojure
-(defn fold [n combinef reducef in]
-  (->> (for [_ (range n)]
-         (async/reduce reducef (reducef) in))
-       (async/merge)
-       (async/map< reducef)
-       (async/reduce combinef (combinef))
-       (async/map< combinef)))
+(require '[clojure.core.async :as async])
 
-#_(->> (load-data "data.edn")
-     (sequence (comp xform (map :score)))
-     (async/to-chan)
-     (fold 2 histogram-combiner histogram-reducer)
-     (async/<!!))
-#+END_SRC
-
-* 
-
-;; IMAGE OF BILL BAILEY
-
-* 
-
-#+BEGIN_SRC clojure
 (defn fold [n xform reducef combinef in]
   (let [reduced (async/chan n)
         f       (xform reducef)]
@@ -520,49 +790,71 @@ PICTURE OF SOMETHING STATEFUL?
            (combinef)))))
 #+END_SRC
 
+#+BEGIN_NOTES
+CSP channels and goroutines
+Cooperative multithreading
+Fixed size theadpool (cpus * 2) + 42
+#+END_NOTES
+
+* 
+:PROPERTIES:
+:CUSTOM_ID: parallel2
+:reveal_background:  ./images/multineck/billbailey.jpg
+:END:
+
+https://www.youtube.com/watch?v=EAZdiJGWdfI
+
 * 
 
 #+BEGIN_SRC clojure
 (def data (take 100000 (cycle (load-data "data.edn"))))
 
-(with-progress-reporting
-  (quick-bench
-   (->> (async/to-chan data)
-        (fold 1 (comp xform (map :score))
-              (completing histogram-reducer)
-              histogram-combiner)
-        (async/<!!))))
+(quick-bench
+ (->> (async/to-chan data)
+      (fold 8 (comp xform (map :score))
+            histogram-reducer
+            histogram-combiner)
+      (async/<!!)))
 
-(with-progress-reporting
-  (quick-bench
-   (->> (sequence (comp xform (map :score)) data)
-        (r/fold histogram-combiner histogram-reducer))))
+;; Execution time mean : 162.811354 ms
+;; Execution time std-deviation : 168.664279 ms
+
+#+END_SRC
+
+* 
+
+#+BEGIN_SRC clojure
+(quick-bench
+ (->> (eduction xform (map :score) data)
+      (r/fold 8
+              histogram-combiner
+              histogram-reducer)))
+
+;; Execution time mean : 50.593113 ms
+;; Execution time std-deviation : 2.644261 ms
+
 #+END_SRC
 
 * Summary
 
-- Separate process from substrate
-- Transducers, step functions and transducible processes
-- Reducing and combining functions
-- Create composable, extensible units of computation
-- Defer decisions about context
-- Benefit
+#+ATTR_REVEAL: :frag (appear)
+- Step functions
+  - init, step, complete
+  - reduced?
+  - composition:
+    - juxt, facet, fuse
+- Transducible contexts:
+  - sequence, transduce, eduction
+  - fold
 
 * References
 
-https://github.com/cgrand/xforms
-
-https://github.com/aphyr/tesser
-
-* Thanks!
-
-https://github.com/henrygarner/data-science-london-oct-2015
-
-[[./images/henrygarner.jpeg]]
-
-Henry Garner
-
-@henrygarner
+#+ATTR_REVEAL: :frag (appear)
+- https://github.com/cgrand/xforms
+  - reduce, into, by-key, partition, pad, for and window
+  - str, str!, avg, count, juxt, juxt-map and first
+- https://github.com/aphyr/tesser
+  - correlation, variance, covariance, standard-deviation
 
 * If you liked this...
 
@@ -574,11 +866,21 @@ http://cljds.com/cljds-amzn
  https://github.com/clojuredatascience
 
 #+BEGIN_NOTES
-- This is new material
-- Cover Clojure applied to statistical analysis
-- Ideally you know a little Clojure already
+- This is new material.
 - Learn statistics and machine learning with Clojure
+
+- Chapters on classification, clustering, recommenders.
 #+END_NOTES
+
+* Thanks!
+
+https://github.com/henrygarner/cljx-december-2015
+
+[[./images/henrygarner.jpeg]]
+
+Henry Garner
+
+@henrygarner
 
 * Questions?
 

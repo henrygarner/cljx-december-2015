@@ -758,6 +758,16 @@ completing
 
 (transduce (map identity) summary-stats (range 100))
 
+(def rf
+  (fuse {:mean-score ((map :score) mean)
+         :fields (facet
+                  (fuse {:mean mean
+                         :sd   standard-deviation})
+                  [:a :b])}))
+
+(->> (load-data "data.edn")
+     (transduce xform rf))
+
 (def fields [:a :b])
 
 (def summary-stats

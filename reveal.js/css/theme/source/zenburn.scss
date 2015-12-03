@@ -25,16 +25,17 @@ $heading4Size: 1.00em;
 
 $base00:     #3F3F3F;
 $base00:     #92a4a7;
-$base00: #DCDCDC;
+$base00:     #93a1a1;
 $backgroundColor: #EAEAEA;
 $backgroundColor: #102c5b;
 $backgroundColor: #002b36;
 $backgroundColor: #262626;
+$backgroundColor: #fef7e2;
 
 // Override theme settings (see ../template/settings.scss)
 $mainColor: $base00;
 
-$headingColor: $base00;
+$headingColor: #586e75;
 $headingTextShadow: none;
 $headingFont: 'Ubuntu', serif;
 $headingTextTransform: none;
@@ -58,12 +59,31 @@ $linkColor: #0433ff;
 @import "../template/theme";
 // ---------------------------------------------
 
-#slide-pedal {
+#slide-pedal,
+#slide-slug1,
+#slide-slug2,
+#slide-slug3 {
     height: 100% !important;
     font-size: 0.5em;
     position: absolute !important;
     top: 0 !important;
     color: #CCC;
+    a {
+      color: inherit !important;
+    }
+}
+
+#slide-hero h2 {
+  text-align: left;
+  color: white;
+}
+
+#slide-pedals {
+    height: 100% !important;
+    font-size: 0.5em;
+    position: absolute !important;
+    top: 0 !important;
+    color: #00F;
     a {
       color: inherit !important;
     }
@@ -80,15 +100,15 @@ $linkColor: #0433ff;
 //   }
 // }
 
-pre.src {
+pre {
     display: block;
-    padding: 1em;
-//    background: #3F3F3F;
-    color: #DCDCDC;
-    line-height: 1.2em;
-    box-shadow: none;
-    font-size: 0.8em;
+    padding: 1em !important;
+    color: #586e75 !important;
+    line-height: 1.2em !important;
+    box-shadow: none !important;
+    font-size: 0.8em !important;
 }
+
 
 ul > li {
   line-height: 1.6em !important;

@@ -127,6 +127,11 @@
 (def standard-deviation
   (completing variance #(Math/sqrt (variance %))))
 
+(->> (load-data "data.edn")
+     (transduce (comp xform (map :score)) standard-deviation))
+
+;; => 343.6204301260331
+
 ;; Normalization
 
 (->> (load-data "data.edn")
@@ -135,7 +140,8 @@
 ;; ([90 50] [80 80] [60 40] [50 70])
 
 #_(->> (load-data "data.edn")
-       (transduce (map :score) (juxt mean standard-deviation)))
+       (transduce (comp xform (map :score))
+                  (juxt mean standard-deviation)))
 
 ;; PICTURE OF GUITAR SLUG
 
@@ -248,7 +254,8 @@
 ;;            :sd 169.71176545346918}
 ;;           {:mean 200.83333333333334,
 ;;            :sd 176.78258775494078}]}
-;; 
+;;
+
 (require '[clojure.core.reducers :as r])
 
 (defn mean-reducer

@@ -290,7 +290,8 @@ body {
 #slide-pedal,
 #slide-slug1,
 #slide-slug2,
-#slide-slug3 {
+#slide-slug3,
+#slide-parallel2 {
   height: 100% !important;
   font-size: 0.5em;
   position: absolute !important;
@@ -299,7 +300,8 @@ body {
   #slide-pedal a,
   #slide-slug1 a,
   #slide-slug2 a,
-  #slide-slug3 a {
+  #slide-slug3 a,
+  #slide-parallel2 a {
     color: inherit !important; }
 
 #slide-hero h2 {

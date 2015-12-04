@@ -8,6 +8,10 @@
 #+REVEAL_TRANS: none
 
 #+BEGIN_NOTES
+coach, data analytics CTO,
+practicing data scientist
+
+Titles
 Transducers from the bottom up
 Fun with Reducing functions
 #+END_NOTES
@@ -19,9 +23,9 @@ Fun with Reducing functions
 [[./images/the-wur.png]]
 
 #+BEGIN_NOTES
-- Not going to cover anything especially new
-- Encourage you to look closer at some of what Clojure already provides
-- Give you some new ways to solve existing problems
+- Collaborate
+
+- List of prestigious academic institutions
 
 - Released a couple of months ago
 - New methodology
@@ -46,7 +50,7 @@ https://www.timeshighereducation.com/news/ranking-methodology-2016
 This isn't BIG DATA
 #+END_NOTES
 
-* Annoying-sized data
+* "Annoying-sized data"
 
 #+ATTR_REVEAL: :frag appear
 [[./images/bruce.jpg]]
@@ -75,7 +79,9 @@ This isn't BIG DATA
 4. x 13 x 7
 
 #+BEGIN_NOTES
-- Normalise, calculate CDFs
+- 000s, units, different currencies
+- PPP
+- get everything between zero and 1.
 
 - This is data engineering
 - Want to productionise sexy algorithm
@@ -93,6 +99,11 @@ This isn't BIG DATA
 ;; {:name "D", :fx 0.5, :a 50, :b 70})
 #+END_SRC
 
+#+BEGIN_NOTES
+- Imagine this sample data. We'll use this for all our examples.
+- Fx stands for financial exchange rate
+#+END_NOTES
+
 * 
 
 #+BEGIN_SRC clojure
@@ -106,11 +117,26 @@ This isn't BIG DATA
 ;; {:name "D", :fx 0.5, :a 100.0, :b 140.0, :score 240.0})
 #+END_SRC
 
+#+BEGIN_NOTES
+- Problems:
+- Intermediate collections
+- Output is always a lazy sequence
+
+- mapv, channels
+#+END_NOTES
+
 * 
 
 #+BEGIN_SRC clojure
 (filter relevant?)
 #+END_SRC
+
+#+BEGIN_NOTES
+- This is a transducer
+- Free computation
+-
+- What's it like?
+#+END_NOTES
 
 * 
 :PROPERTIES:
@@ -119,6 +145,10 @@ This isn't BIG DATA
 :END:
 
 CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/3824494272/
+
+#+BEGIN_NOTES
+- Effects pedal
+#+END_NOTES
 
 * 
 
@@ -147,6 +177,12 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/4462883383/
 ;; {:name "D", :fx 0.5, :a 100.0, :b 140.0, :score 240.0})
 #+END_SRC
 
+#+BEGIN_NOTES
+- New sequence processing functions expecting transducers
+-
+- It's like we've connected to the effects loop
+#+END_NOTES
+
 * 
 :PROPERTIES:
 :CUSTOM_ID: guitar
@@ -169,14 +205,20 @@ CC BY 2.0 https://www.flickr.com/photos/cmatsuoka/4462883383/
 #+END_SRC
 
 #+BEGIN_NOTES
-Both of these things are sequences
+- Great things:
+- Extensible!
+- But these things are sequences
 #+END_NOTES
 
 * 
 :PROPERTIES:
 :CUSTOM_ID: amp
-:reveal_background: ./images/amps/combo-amp.jpg
+:reveal_background: ./images/amps/9.jpg
 :END:
+
+#+BEGIN_NOTES
+- We're connected to our trusty workhorse amp
+#+END_NOTES
 
 * 
 
@@ -191,7 +233,8 @@ Both of these things are sequences
 #+END_SRC
 
 #+BEGIN_NOTES
-Step functions FTW
+- We also get transduce
+- Can completely alter the output
 #+END_NOTES
 
 * 
@@ -199,6 +242,13 @@ Step functions FTW
 :CUSTOM_ID: tesla
 :reveal_background: ./images/amps/Tesla-Coil-lighting-stunt-with-guitar.jpg
 :END:
+
+#+BEGIN_NOTES
+- No intermediate collections
+- 
+- Let's back up
+- Show why step functions and transduce are cool
+#+END_NOTES
 
 * 
 
@@ -210,13 +260,23 @@ Step functions FTW
       (/ sum count)))
 #+END_SRC
 
+#+BEGIN_NOTES
+- This is mean
+- Two iterations over the collection
+- 
+- We're functional programmers, we have reduce!
+#+END_NOTES
+
 * 
 
 #+BEGIN_SRC clojure
 (defn mean [accum x]
   (-> (update-in accum [:sum] + x)
       (update-in [:count] inc)))
+#+END_SRC
 
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (reduce mean (range 10))
 
 ;; => ...?
@@ -274,11 +334,17 @@ http://slugsolos.tumblr.com/
    (-> (update-in accum [:count] inc)
        (update-in [:sum] + x))))
 
-
+#+END_SRC
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (reduce mean (mean) (range 10))
 
 ;; => {:sum 45, :count 10}
 #+END_SRC
+
+#+BEGIN_NOTES
+- Output isn't really what we want
+#+END_NOTES
 
 * 
 
@@ -296,15 +362,18 @@ http://slugsolos.tumblr.com/
   ([{:keys [sum count]}]
    (when-not (zero? count)
      (/ sum count))))
-
-
+#+END_SRC
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
 (mean (reduce mean (mean) (range 10)))
 
 ;; => 9/2
 #+END_SRC
 
 #+BEGIN_NOTES
-This is what transduce does
+- When we're done we call complete
+-
+- This is what transduce does
 #+END_NOTES
 
 * 
@@ -315,9 +384,9 @@ This is what transduce does
 #+END_SRC
 
 #+BEGIN_NOTES
-Get this behaviour for free
-
-What is identity transducer?
+- Behviour for free
+-
+- What is identity transducer?
 #+END_NOTES
 
 * What is the identity transducer?
@@ -346,7 +415,13 @@ What is identity transducer?
 
 #+BEGIN_SRC clojure
 (transduce identity mean (range 10))
+
+;; => 9/2
 #+END_SRC
+
+#+BEGIN_NOTES
+- Look at a more sophisticated example
+#+END_NOTES
 
 * 
 
@@ -392,12 +467,20 @@ Variance is useful, but we usually want standard deviation
   (completing variance #(Math/sqrt (variance %))))
 #+END_SRC
 
-#+BEGIN_NOTES
-Completing introduced in Clojure 1.7
+#+ATTR_REVEAL: :frag appear
+#+BEGIN_SRC clojure
+(->> (load-data "data.edn")
+     (transduce scores standard-deviation))
 
-Want to calculate mean and standard deviation
-At the same time.
-Variance is a black box
+;; => 343.6204301260331
+#+END_SRC
+
+#+BEGIN_NOTES
+- Completing introduced in Clojure 1.7
+
+- Want to calculate mean and standard deviation
+- At the same time.
+- Variance is a black box
 #+END_NOTES
 
 * 
@@ -410,13 +493,14 @@ Variance is a black box
 #+END_SRC
 
 #+BEGIN_NOTES
-Might try and do this with step functions
+- Might try and do this with step functions
 #+END_NOTES
 
 * 
 #+BEGIN_SRC clojure
 (->> (load-data "data.edn")
-     (transduce (map :a) (juxt mean standard-deviation)))
+     (transduce scores
+                (juxt mean standard-deviation)))
 
 ;; => ?
 #+END_SRC
@@ -428,6 +512,37 @@ Might try and do this with step functions
 :END:
 
 http://slugsolos.tumblr.com/
+
+* 
+
+#+BEGIN_SRC text
+1. Unhandled java.lang.NullPointerException
+   (No message)
+
+     Numbers.java: 1013  clojure.lang.Numbers/ops
+     Numbers.java:  112  clojure.lang.Numbers/inc
+         core.clj:  892  clojure.core/inc
+         AFn.java:  154  clojure.lang.AFn/applyToHelper
+         AFn.java:  144  clojure.lang.AFn/applyTo
+         core.clj:  632  clojure.core/apply
+         core.clj: 5923  clojure.core/update-in
+      RestFn.java:  445  clojure.lang.RestFn/invoke
+        sweet.clj:   82  example.sweet/mean
+         core.clj: 2464  clojure.core/juxt/fn
+         core.clj: 2611  clojure.core/map/fn/fn
+         core.clj: 2611  clojure.core/map/fn/fn
+         core.clj: 2611  clojure.core/map/fn/fn
+         core.clj: 2675  clojure.core/filter/fn/fn
+    protocols.clj:  167  clojure.core.protocols/fn
+    protocols.clj:   19  clojure.core.protocols/fn/G
+    protocols.clj:   31  clojure.core.protocols/seq-reduce
+    protocols.clj:  101  clojure.core.protocols/fn
+    protocols.clj:   13  clojure.core.protocols/fn/G
+         core.clj: 6590  clojure.core/transduce
+         core.clj: 6585  clojure.core/transduce
+             REPL:    2  example.sweet/eval47021
+
+#+END_SRC
 
 * 
 
@@ -523,6 +638,23 @@ What's going on inside take?
                          rfns acc)]
        (if @all-reduced? (reduced results) results)))))
 #+END_SRC
+#+BEGIN_NOTES
+- If all values are reduced, we're reduced.
+- Only call step function on non-reduced accumulators
+-
+- Fixed! We have parallel step functions
+#+END_NOTES
+
+* 
+:PROPERTIES:
+:CSS_ID: sound-wall
+:reveal_background: ./images/speakers/Grateful-Dead-Wall-of-Sound-Center-600x360.jpg
+:END:
+
+#+BEGIN_NOTES
+-
+- A word of warning...
+#+END_NOTES
 
 * 
 
@@ -576,7 +708,7 @@ In fact it opens up possibilities
 #+BEGIN_SRC clojure
 (defn facet [rf fns]
   (->> (map (fn [f] ((map f) rf)) fns)
-       (apply juxt-reducer)))
+       (apply juxt-r)))
 
 (def rf
   (facet + [:a :b]))
@@ -591,12 +723,12 @@ In fact it opens up possibilities
 #+END_SRC
 
 #+BEGIN_NOTES
-A and b are just ordinary functions
+- A and b are just ordinary functions
 They will be applied independently to the input
 
-Compare to juxt.
+- Compare to juxt.
 
-What can we do with this?
+- What can we do with this?
 #+END_NOTES
 
 * 
@@ -627,7 +759,7 @@ What else could we do by wrapping juxt-r?
 #+BEGIN_SRC clojure
 (defn fuse [kvs]
   (let [rfns (vals kvs)
-        rf   (apply juxt-reducer rfns)]
+        rf   (apply juxt-r rfns)]
     (completing rf #(zipmap (keys kvs) (rf %)))))
 
 (def rf
@@ -709,7 +841,8 @@ Clojure 1.5
 
 (defn iqr-reducer
   ([] (DoubleHistogram. 1e8 3))
-  ([hist x] (doto hist (.recordValue x))))
+  ([hist x] (doto hist (.recordValue x)))
+  ([hist] hist))
 
 (defn iqr-combiner
   ([] (DoubleHistogram. 1e8 3))
@@ -719,8 +852,12 @@ Clojure 1.5
            (.getValueAtPercentile hist 75))))
 #+END_SRC
 
+* Fold
+
 * 
 #+BEGIN_SRC clojure
+(require '[clojure.core.reducers :as r])
+
 (->> (load-data "data.edn")
      (eduction xform (map :score))
      (r/fold iqr-combiner iqr-reducer))
@@ -730,12 +867,15 @@ Clojure 1.5
 #+END_SRC
 
 #+BEGIN_NOTES
-Combinef provides init value
-Combinef must be associative
+- Eduction
+- 
+- Complete will not be called...
 #+END_NOTES
 
 * 
 #+BEGIN_SRC clojure
+(require '[clojure.core.reducers :as r])
+
 (->> (load-data "data.edn")
      (eduction xform (map :score))
      (r/fold iqr-combiner iqr-reducer)
@@ -745,8 +885,7 @@ Combinef must be associative
 #+END_SRC
 
 #+BEGIN_NOTES
-Combinef provides init value
-Combinef must be associative!
+- Do we have any other new parallel tools?
 #+END_NOTES
 
 * 
@@ -760,16 +899,16 @@ Combinef must be associative!
 "The conveyor belt of awesomeness"
 -- Kris Jenkins
 
-* Where's our cuddly toy? 
+* 
 
 - reduce
-- map>
+- map<
 - pipeline
 
-* Where's our cuddly toy?  
+* 
 
 - reduce
-- +map>+
+- +map<+
 - pipeline
 
 * 
@@ -791,9 +930,11 @@ Combinef must be associative!
 #+END_SRC
 
 #+BEGIN_NOTES
-CSP channels and goroutines
-Cooperative multithreading
-Fixed size theadpool (cpus * 2) + 42
+- CSP channels and goroutines
+- Cooperative multithreading
+- Fixed size theadpool (cpus * 2) + 42
+-
+- Fully parallel!!
 #+END_NOTES
 
 * 
@@ -821,6 +962,10 @@ https://www.youtube.com/watch?v=EAZdiJGWdfI
 
 #+END_SRC
 
+#+BEGIN_NOTES
+A word of caution...
+#+END_NOTES
+
 * 
 
 #+BEGIN_SRC clojure
@@ -842,7 +987,7 @@ https://www.youtube.com/watch?v=EAZdiJGWdfI
   - init, step, complete
   - reduced?
   - composition:
-    - juxt, facet, fuse
+    - juxt-r, facet, fuse
 - Transducible contexts:
   - sequence, transduce, eduction
   - fold
@@ -855,6 +1000,8 @@ https://www.youtube.com/watch?v=EAZdiJGWdfI
   - str, str!, avg, count, juxt, juxt-map and first
 - https://github.com/aphyr/tesser
   - correlation, variance, covariance, standard-deviation
+- https://tbaldridge.pivotshare.com/
+  - Logic Programming, Core.Async, Transients, and more
 
 * If you liked this...
 
